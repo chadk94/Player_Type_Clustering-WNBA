@@ -1,6 +1,7 @@
 import time
 import math
 import difflib
+import datetime
 
 import nba_api.stats.library.data
 import numpy as np
@@ -12,10 +13,8 @@ from scipy.stats import poisson as scipy_poisson
 from nba_api.stats.library.parameters import SeasonTypeAllStar, PlayerOrTeamAbbreviation
 from sklearn.cluster import KMeans
 from nba_api.stats.endpoints import LeagueGameLog, SynergyPlayTypes, PlayerDashPtShots, shotchartdetail, \
-    ShotChartDetail, LeagueHustleStatsPlayer, synergyplaytypes, LeagueDashPtStats
-from nba_api.stats.endpoints import scoreboardv2
+    ShotChartDetail, LeagueHustleStatsPlayer, synergyplaytypes, LeagueDashPtStats, ScoreboardV3
 from nba_api.stats.static.players import get_players
-from nba_api.live.nba.endpoints import scoreboard
 from nba_api.stats.static import teams
 from nba_api.stats.endpoints import commonteamroster
 from sklearn.preprocessing import StandardScaler
@@ -435,13 +434,22 @@ def load_todays_matchups(merged,min_date, max_date):
         return None
 
 def get_scoreboard(): ##Returns todays games + opponents. Helper function for build_player_list
-    board = scoreboardv2.ScoreboardV2()
-    games = board.game_header.get_data_frame()
-    matchups=[]
-    for index,row in games.iterrows():
-        awayTeam=row['VISITOR_TEAM_ID']
-        homeTeam=row['HOME_TEAM_ID']
-        matchups.append([awayTeam,homeTeam])
+    today = datetime.date.today().strftime('%Y-%m-%d')
+    board = ScoreboardV3(game_date=today)
+    game_header = board.game_header.get_data_frame()
+    line_scores = board.line_score.get_data_frame()
+    matchups = []
+    for _, row in game_header.iterrows():
+        game_id = row['gameId']
+        # gameCode format: YYYYMMDD/AWYHOM (3-char away + 3-char home tricode)
+        team_codes = row['gameCode'].split('/')[1]
+        away_tricode = team_codes[:3]
+        home_tricode = team_codes[3:]
+        game_lines = line_scores[line_scores['gameId'] == game_id]
+        away_id = game_lines[game_lines['teamTricode'] == away_tricode]['teamId'].values
+        home_id = game_lines[game_lines['teamTricode'] == home_tricode]['teamId'].values
+        if len(away_id) and len(home_id):
+            matchups.append([away_id[0], home_id[0]])
     return matchups
 def build_player_list(): ##builds a list of players in todays games as well as their opponents  and whether they are home or away.
     matchups=get_scoreboard()
@@ -453,9 +461,9 @@ def build_player_list(): ##builds a list of players in todays games as well as t
         awayid= matchup[0]
         homeid =matchup[1]
         time.sleep(1)
-        awayroster=commonteamroster.CommonTeamRoster(team_id=awayid,season='2025')
+        awayroster=commonteamroster.CommonTeamRoster(team_id=awayid,season='2025-26')
         time.sleep(1)
-        homeroster = commonteamroster.CommonTeamRoster(team_id=homeid,season='2025')
+        homeroster = commonteamroster.CommonTeamRoster(team_id=homeid,season='2025-26')
         awayroster=pd.DataFrame(awayroster.get_data_frames()[0].PLAYER_ID)
         awayroster['Home']=False
         awayroster['OPP']=str(homeabb)
