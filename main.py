@@ -1579,24 +1579,24 @@ def load_data():
     }
     OFF_CLUSTER_NAMES = {
         0: 'Paint-First Big',
-        1: 'Stretch Big',
-        2: 'Scoring Wing',
-        3: 'Stretch Forward',
-        4: 'Drive-First Guard',
-        5: 'Star Forward',
-        6: 'Playmaking Guard',
+        1: '3-and-D Wing',
+        2: 'Playmaking Guard',
+        3: 'Star Forward',
+        4: 'Role Guard',
     }
     DEF_CLUSTER_NAMES = {
-        0: 'Two-Way Wing',
+        0: 'Rebounding Wing',
         1: 'Perimeter Disruptor',
         2: 'Rim Protector',
         3: 'Post Anchor',
-        4: 'Dominant Big',
-        5: 'Role Defender',
-        6: 'Guard Scorer',
-        7: 'Elite Playmaker',
-        8: 'Anchor Big',
-        9: 'Stretch Forward',
+        4: 'Role Defender',
+        5: 'Ball-Hawk Guard',
+        6: 'Athletic Wing',
+        7: 'Defensive Anchor',
+        8: 'Outlier',
+        9: 'Two-Way Big',
+        10: 'Anchor Big',
+        11: 'Reserve Guard',
     }
     playerbox = LeagueGameLog(
         player_or_team_abbreviation='P',
