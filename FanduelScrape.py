@@ -53,7 +53,7 @@ def getnbaprops():
             return {'error': str(e)}
 
     # Example usage
-    sport_key = 'basketball_nba'  # NBA odds
+    sport_key = 'basketball_wnba'  # WNBA odds
 
     # Step 1: Get all event IDs for the sport
     event_ids = get_event_ids(sport_key)
@@ -126,7 +126,7 @@ def get_team_totals():
     """
     API_KEY = '50d7871c8a201db4df96c55ed424cd6a'
     BASE_URL = 'https://api.the-odds-api.com/v4/sports'
-    sport_key = 'basketball_nba'
+    sport_key = 'basketball_wnba'
 
     url = f"{BASE_URL}/{sport_key}/odds"
     params = {

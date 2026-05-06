@@ -15,11 +15,33 @@ from sklearn.cluster import KMeans
 from nba_api.stats.endpoints import LeagueGameLog, SynergyPlayTypes, PlayerDashPtShots, shotchartdetail, \
     ShotChartDetail, LeagueHustleStatsPlayer, synergyplaytypes, LeagueDashPtStats, ScoreboardV3
 from nba_api.stats.static.players import get_players
-from nba_api.stats.static import teams
 from nba_api.stats.endpoints import commonteamroster
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from FanduelScrape import getnbaprops, reformat_api, get_team_totals
+
+WNBA_LEAGUE_ID = '10'
+WNBA_CURRENT_SEASON = '2025'  # Most recent completed WNBA season
+WNBA_SEASONS = ['2023', '2024', '2025']
+
+# WNBA teams: id, abbreviation, full name
+WNBA_TEAMS = [
+    {'id': 1611661313, 'abbreviation': 'NYL', 'full_name': 'New York Liberty'},
+    {'id': 1611661316, 'abbreviation': 'LVA', 'full_name': 'Las Vegas Aces'},
+    {'id': 1611661317, 'abbreviation': 'MIN', 'full_name': 'Minnesota Lynx'},
+    {'id': 1611661319, 'abbreviation': 'CON', 'full_name': 'Connecticut Sun'},
+    {'id': 1611661320, 'abbreviation': 'PHX', 'full_name': 'Phoenix Mercury'},
+    {'id': 1611661321, 'abbreviation': 'CHI', 'full_name': 'Chicago Sky'},
+    {'id': 1611661322, 'abbreviation': 'ATL', 'full_name': 'Atlanta Dream'},
+    {'id': 1611661323, 'abbreviation': 'LAS', 'full_name': 'Los Angeles Sparks'},
+    {'id': 1611661324, 'abbreviation': 'IND', 'full_name': 'Indiana Fever'},
+    {'id': 1611661325, 'abbreviation': 'DAL', 'full_name': 'Dallas Wings'},
+    {'id': 1611661326, 'abbreviation': 'SEA', 'full_name': 'Seattle Storm'},
+    {'id': 1611661327, 'abbreviation': 'WAS', 'full_name': 'Washington Mystics'},
+    {'id': 1611661328, 'abbreviation': 'GSV', 'full_name': 'Golden State Valkyries'},
+    {'id': 1611661329, 'abbreviation': 'TOR', 'full_name': 'Toronto Tempo'},   # verify id
+    {'id': 1611661330, 'abbreviation': 'POR', 'full_name': 'Portland Fire'},    # verify id
+]
 
 # Per-stat half-life values (games) derived from backtest.
 # Weight of a game N games ago = 0.5 ^ (N / half_life). 999 ≈ no decay.
@@ -75,18 +97,23 @@ def load_fanduel_props():
         return pd.DataFrame()
 
 
-# Maps Odds API full team names → NBA abbreviations
+# Maps Odds API full team names → WNBA abbreviations
 _ODDS_TEAM_TO_ABBREV = {
-    'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BKN',
-    'Charlotte Hornets': 'CHA', 'Chicago Bulls': 'CHI', 'Cleveland Cavaliers': 'CLE',
-    'Dallas Mavericks': 'DAL', 'Denver Nuggets': 'DEN', 'Detroit Pistons': 'DET',
-    'Golden State Warriors': 'GSW', 'Houston Rockets': 'HOU', 'Indiana Pacers': 'IND',
-    'Los Angeles Clippers': 'LAC', 'Los Angeles Lakers': 'LAL', 'Memphis Grizzlies': 'MEM',
-    'Miami Heat': 'MIA', 'Milwaukee Bucks': 'MIL', 'Minnesota Timberwolves': 'MIN',
-    'New Orleans Pelicans': 'NOP', 'New York Knicks': 'NYK', 'Oklahoma City Thunder': 'OKC',
-    'Orlando Magic': 'ORL', 'Philadelphia 76ers': 'PHI', 'Phoenix Suns': 'PHX',
-    'Portland Trail Blazers': 'POR', 'Sacramento Kings': 'SAC', 'San Antonio Spurs': 'SAS',
-    'Toronto Raptors': 'TOR', 'Utah Jazz': 'UTA', 'Washington Wizards': 'WAS',
+    'Atlanta Dream': 'ATL',
+    'Chicago Sky': 'CHI',
+    'Connecticut Sun': 'CON',
+    'Dallas Wings': 'DAL',
+    'Golden State Valkyries': 'GSV',
+    'Indiana Fever': 'IND',
+    'Las Vegas Aces': 'LVA',
+    'Los Angeles Sparks': 'LAS',
+    'Minnesota Lynx': 'MIN',
+    'New York Liberty': 'NYL',
+    'Phoenix Mercury': 'PHX',
+    'Seattle Storm': 'SEA',
+    'Washington Mystics': 'WAS',
+    'Toronto Tempo': 'TOR',
+    'Portland Fire': 'POR',
 }
 
 
@@ -181,7 +208,7 @@ def get_inactive_players() -> set:
     """
     INACTIVE_STATUSES = {'out', 'doubtful'}
     try:
-        url = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/injuries'
+        url = 'https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/injuries'
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json()
@@ -433,15 +460,14 @@ def load_todays_matchups(merged,min_date, max_date):
         st.exception(e)  # Shows full traceback in Streamlit
         return None
 
-def get_scoreboard(): ##Returns todays games + opponents. Helper function for build_player_list
+def get_scoreboard():
     today = datetime.date.today().strftime('%Y-%m-%d')
-    board = ScoreboardV3(game_date=today)
+    board = ScoreboardV3(game_date=today, league_id=WNBA_LEAGUE_ID)
     game_header = board.game_header.get_data_frame()
     line_scores = board.line_score.get_data_frame()
     matchups = []
     for _, row in game_header.iterrows():
         game_id = row['gameId']
-        # gameCode format: YYYYMMDD/AWYHOM (3-char away + 3-char home tricode)
         team_codes = row['gameCode'].split('/')[1]
         away_tricode = team_codes[:3]
         home_tricode = team_codes[3:]
@@ -449,35 +475,33 @@ def get_scoreboard(): ##Returns todays games + opponents. Helper function for bu
         away_id = game_lines[game_lines['teamTricode'] == away_tricode]['teamId'].values
         home_id = game_lines[game_lines['teamTricode'] == home_tricode]['teamId'].values
         if len(away_id) and len(home_id):
-            matchups.append([away_id[0], home_id[0]])
+            matchups.append([away_id[0], away_tricode, home_id[0], home_tricode])
     return matchups
-def build_player_list(): ##builds a list of players in todays games as well as their opponents  and whether they are home or away.
-    matchups=get_scoreboard()
-    nba_teams=teams.get_teams()
-    playeroutput=pd.DataFrame()
+
+
+def build_player_list():
+    matchups = get_scoreboard()
+    playeroutput = pd.DataFrame()
     for matchup in matchups:
-        awayabb = [team['abbreviation'] for team in nba_teams if team["id"] == matchup[0]]
-        homeabb=[team['abbreviation'] for team in nba_teams if team["id"] == matchup[1]]
-        awayid= matchup[0]
-        homeid =matchup[1]
+        awayid, awayabb, homeid, homeabb = matchup[0], matchup[1], matchup[2], matchup[3]
         time.sleep(1)
-        awayroster=commonteamroster.CommonTeamRoster(team_id=awayid,season='2025-26')
+        awayroster = commonteamroster.CommonTeamRoster(team_id=awayid, season=WNBA_CURRENT_SEASON)
         time.sleep(1)
-        homeroster = commonteamroster.CommonTeamRoster(team_id=homeid,season='2025-26')
-        awayroster=pd.DataFrame(awayroster.get_data_frames()[0].PLAYER_ID)
-        awayroster['Home']=False
-        awayroster['OPP']=str(homeabb)
-        awayroster['TEAM']=str(awayabb)
-        homeroster=pd.DataFrame(homeroster.get_data_frames()[0].PLAYER_ID)
-        homeroster['Home']=True
-        homeroster['OPP']=str(awayabb)
-        homeroster['TEAM']=str(homeabb)
+        homeroster = commonteamroster.CommonTeamRoster(team_id=homeid, season=WNBA_CURRENT_SEASON)
+        awayroster = pd.DataFrame(awayroster.get_data_frames()[0].PLAYER_ID)
+        awayroster['Home'] = False
+        awayroster['OPP'] = str([homeabb])
+        awayroster['TEAM'] = str([awayabb])
+        homeroster = pd.DataFrame(homeroster.get_data_frames()[0].PLAYER_ID)
+        homeroster['Home'] = True
+        homeroster['OPP'] = str([awayabb])
+        homeroster['TEAM'] = str([homeabb])
         playeroutput = pd.concat([playeroutput, awayroster, homeroster]).drop_duplicates()
     return playeroutput
 
 
-def get_playtype_stats(season='2025-26'):
-    """Get synergy play type stats - both offensive and defensive frequencies."""
+def get_playtype_stats(season=WNBA_CURRENT_SEASON):
+    """Get synergy play type stats. NOTE: Synergy data is NBA-only; returns None for WNBA."""
 
     # Define play types to pull
     offensive_types = ['PRBallHandler', 'PRRollman', 'Postup', 'Spotup', 'OffScreen', 'Cut']
@@ -564,7 +588,7 @@ def get_playtype_stats(season='2025-26'):
     except Exception as e:
         print(f"Error merging play type stats: {e}")
         return None, None, None
-def get_shot_chart_data(player_id, season='2025-26', max_retries=3):
+def get_shot_chart_data(player_id, season=WNBA_CURRENT_SEASON, max_retries=3):
     """Get detailed shot chart data for a player."""
     for attempt in range(max_retries):
         try:
@@ -575,9 +599,10 @@ def get_shot_chart_data(player_id, season='2025-26', max_retries=3):
             shot_chart = ShotChartDetail(
                 player_id=player_id,
                 team_id=0,
-                season_nullable='2025-26',
+                season_nullable=WNBA_CURRENT_SEASON,
                 season_type_all_star='Regular Season',
-                context_measure_simple='FGA'
+                context_measure_simple='FGA',
+                league_id=WNBA_LEAGUE_ID
             ).get_data_frames()[0]
 
             # Calculate zone-based metrics
@@ -652,7 +677,7 @@ def get_shot_chart_data(player_id, season='2025-26', max_retries=3):
                 return None
 
 
-def get_hustle_stats(season='2025-26'):
+def get_hustle_stats(season=WNBA_CURRENT_SEASON):
     """Get hustle stats for all players - contested shots and deflections."""
 
     max_retries = 3
@@ -664,6 +689,7 @@ def get_hustle_stats(season='2025-26'):
             hustle = LeagueHustleStatsPlayer(
                 season=season,
                 season_type_all_star='Regular Season',
+                league_id=WNBA_LEAGUE_ID,
             ).get_data_frames()[0]
 
             # Select relevant columns
@@ -699,7 +725,7 @@ def get_hustle_stats(season='2025-26'):
                 return None
             print("Waiting 60 seconds before retry...")
             time.sleep(60)
-def get_tracking_stats(season='2025-26'):
+def get_tracking_stats(season=WNBA_CURRENT_SEASON):
     """Get tracking stats - speed, distance, catch & shoot, passing, drives, and rebounding."""
 
     # Speed/Distance tracking
@@ -712,7 +738,8 @@ def get_tracking_stats(season='2025-26'):
                 season=season,
                 per_mode_simple='PerGame',
                 pt_measure_type='SpeedDistance',
-                player_or_team='Player'
+                player_or_team='Player',
+                league_id=WNBA_LEAGUE_ID
             ).get_data_frames()[0]
 
             tracking_stats = tracking[[
@@ -739,7 +766,8 @@ def get_tracking_stats(season='2025-26'):
                 season=season,
                 per_mode_simple='PerGame',
                 pt_measure_type='CatchShoot',
-                player_or_team='Player'
+                player_or_team='Player',
+                league_id=WNBA_LEAGUE_ID
             ).get_data_frames()[0]
 
             csstats = cs[[
@@ -770,7 +798,8 @@ def get_tracking_stats(season='2025-26'):
                 season=season,
                 per_mode_simple='PerGame',
                 pt_measure_type='Passing',
-                player_or_team='Player'
+                player_or_team='Player',
+                league_id=WNBA_LEAGUE_ID
             ).get_data_frames()[0]
 
             passingstats = passing[[
@@ -800,7 +829,8 @@ def get_tracking_stats(season='2025-26'):
                 season=season,
                 per_mode_simple='PerGame',
                 pt_measure_type='Drives',
-                player_or_team='Player'
+                player_or_team='Player',
+                league_id=WNBA_LEAGUE_ID
             ).get_data_frames()[0]
 
             drivestats = drives[[
@@ -829,7 +859,8 @@ def get_tracking_stats(season='2025-26'):
                 season=season,
                 per_mode_simple='PerGame',
                 pt_measure_type='Rebounding',
-                player_or_team='Player'
+                player_or_team='Player',
+                league_id=WNBA_LEAGUE_ID
             ).get_data_frames()[0]
 
             reboundingstats = rebounding[[
@@ -912,95 +943,91 @@ def enhance_player_data(player_averages, min_games=10):
         for p in failed_players[:10]:  # Show first 10
             print(f"  - {p['PLAYER_NAME']} ({p['PLAYER_ID']})")
 
-    # ============ NEW: GET TRACKING STATS FOR EACH SEASON ============
+    # Season ID mapping: WNBA seasons use single-year format
+    season_id_map = {s: int('1' + s) for s in WNBA_SEASONS}  # e.g. '2025' → 12025
+
+    # ============ GET TRACKING STATS FOR EACH SEASON ============
     print("\nGetting tracking stats...")
-    tracking_stats_2023 = get_tracking_stats(season='2023-24')
-    tracking_stats_2023['SEASON_ID'] = 22023
+    tracking_frames = []
+    for season in WNBA_SEASONS:
+        ts = get_tracking_stats(season=season)
+        if ts is not None:
+            ts['SEASON_ID'] = season_id_map[season]
+            tracking_frames.append(ts)
+    tracking_stats = pd.concat(tracking_frames, ignore_index=True) if tracking_frames else None
+    if tracking_stats is not None:
+        print(f"✓ Combined tracking stats: {len(tracking_stats)} records")
+    else:
+        print("⚠ Tracking stats not available for WNBA — skipping")
 
-    tracking_stats_2024 = get_tracking_stats(season='2024-25')
-    tracking_stats_2024['SEASON_ID'] = 22024
-
-    tracking_stats_2025 = get_tracking_stats(season='2025-26')
-    tracking_stats_2025['SEASON_ID'] = 22025
-
-    # Concat all tracking stats
-    tracking_stats = pd.concat([tracking_stats_2023, tracking_stats_2024, tracking_stats_2025], ignore_index=True)
-    print(f"✓ Combined tracking stats: {len(tracking_stats)} records")
-
-    # ============ NEW: GET HUSTLE STATS FOR EACH SEASON ============
+    # ============ GET HUSTLE STATS FOR EACH SEASON ============
     print("\nGetting hustle stats...")
-    hustle_stats_2023 = get_hustle_stats(season='2023-24')
-    hustle_stats_2023['SEASON_ID'] = 22023
+    hustle_frames = []
+    for season in WNBA_SEASONS:
+        hs = get_hustle_stats(season=season)
+        if hs is not None:
+            hs['SEASON_ID'] = season_id_map[season]
+            hustle_frames.append(hs)
+    hustle_stats = pd.concat(hustle_frames, ignore_index=True) if hustle_frames else None
+    if hustle_stats is not None:
+        print(f"✓ Combined hustle stats: {len(hustle_stats)} records")
+    else:
+        print("⚠ Hustle stats not available for WNBA — skipping")
 
-    hustle_stats_2024 = get_hustle_stats(season='2024-25')
-    hustle_stats_2024['SEASON_ID'] = 22024
-
-    hustle_stats_2025 = get_hustle_stats(season='2025-26')
-    hustle_stats_2025['SEASON_ID'] = 22025
-
-    # Concat all hustle stats
-    hustle_stats = pd.concat([hustle_stats_2023, hustle_stats_2024, hustle_stats_2025], ignore_index=True)
-    print(f"✓ Combined hustle stats: {len(hustle_stats)} records")
-
-    # ============ NEW: GET PLAY TYPE STATS FOR EACH SEASON ============
+    # ============ GET PLAY TYPE STATS FOR EACH SEASON ============
     print("\nGetting play type stats...")
-    playtype_stats_2023, _, _ = get_playtype_stats(season='2023-24')
-    playtype_stats_2023['SEASON_ID'] = 22023
-
-    playtype_stats_2024, _, _ = get_playtype_stats(season='2024-25')
-    playtype_stats_2024['SEASON_ID'] = 22024
-
-    playtype_stats_2025, _, _ = get_playtype_stats(season='2025-26')
-    playtype_stats_2025['SEASON_ID'] = 22025
-
-    # Concat all play type stats
-    playtype_stats = pd.concat([playtype_stats_2023, playtype_stats_2024, playtype_stats_2025], ignore_index=True)
-    print(f"✓ Combined play type stats: {len(playtype_stats)} records")
+    playtype_frames = []
+    for season in WNBA_SEASONS:
+        result = get_playtype_stats(season=season)
+        if result[0] is not None:
+            pt = result[0]
+            pt['SEASON_ID'] = season_id_map[season]
+            playtype_frames.append(pt)
+    playtype_stats = pd.concat(playtype_frames, ignore_index=True) if playtype_frames else None
+    if playtype_stats is not None:
+        print(f"✓ Combined play type stats: {len(playtype_stats)} records")
+    else:
+        print("⚠ Play type stats not available for WNBA — skipping")
 
     # ============ MERGE EVERYTHING TOGETHER ============
     qualified_players = qualified_players.fillna(0)
     qualified_players[['PLAYER_ID', 'SEASON_ID']] = qualified_players[['PLAYER_ID', 'SEASON_ID']].astype(int)
-    all_shot_data[['PLAYER_ID', 'SEASON_ID']] = all_shot_data[['PLAYER_ID', 'SEASON_ID']].astype(int)
 
     # Merge shot chart data
-    enhanced_data = qualified_players.merge(
-        all_shot_data,
-        on=['PLAYER_ID', 'SEASON_ID'],
-        how='left'
-    )
+    if not all_shot_data.empty:
+        all_shot_data[['PLAYER_ID', 'SEASON_ID']] = all_shot_data[['PLAYER_ID', 'SEASON_ID']].astype(int)
+        enhanced_data = qualified_players.merge(all_shot_data, on=['PLAYER_ID', 'SEASON_ID'], how='left')
+    else:
+        enhanced_data = qualified_players.copy()
 
     # Merge tracking stats
-    tracking_stats['PLAYER_ID'] = tracking_stats['PLAYER_ID'].astype(int)
-    tracking_stats['SEASON_ID'] = tracking_stats['SEASON_ID'].astype(int)
-
-    enhanced_data = enhanced_data.merge(
-        tracking_stats.drop(columns=['PLAYER_NAME'], errors='ignore'),
-        on=['PLAYER_ID', 'SEASON_ID'],
-        how='left'
-    )
-    print(f"✓ Merged tracking stats")
+    if tracking_stats is not None:
+        tracking_stats['PLAYER_ID'] = tracking_stats['PLAYER_ID'].astype(int)
+        tracking_stats['SEASON_ID'] = tracking_stats['SEASON_ID'].astype(int)
+        enhanced_data = enhanced_data.merge(
+            tracking_stats.drop(columns=['PLAYER_NAME'], errors='ignore'),
+            on=['PLAYER_ID', 'SEASON_ID'], how='left'
+        )
+        print(f"✓ Merged tracking stats")
 
     # Merge hustle stats
-    hustle_stats['PLAYER_ID'] = hustle_stats['PLAYER_ID'].astype(int)
-    hustle_stats['SEASON_ID'] = hustle_stats['SEASON_ID'].astype(int)
-
-    enhanced_data = enhanced_data.merge(
-        hustle_stats.drop(columns=['PLAYER_NAME'], errors='ignore'),
-        on=['PLAYER_ID', 'SEASON_ID'],
-        how='left'
-    )
-    print(f"✓ Merged hustle stats")
+    if hustle_stats is not None:
+        hustle_stats['PLAYER_ID'] = hustle_stats['PLAYER_ID'].astype(int)
+        hustle_stats['SEASON_ID'] = hustle_stats['SEASON_ID'].astype(int)
+        enhanced_data = enhanced_data.merge(
+            hustle_stats.drop(columns=['PLAYER_NAME'], errors='ignore'),
+            on=['PLAYER_ID', 'SEASON_ID'], how='left'
+        )
+        print(f"✓ Merged hustle stats")
 
     # Merge play type stats
-    playtype_stats['PLAYER_ID'] = playtype_stats['PLAYER_ID'].astype(int)
-    playtype_stats['SEASON_ID'] = playtype_stats['SEASON_ID'].astype(int)
-
-    enhanced_data = enhanced_data.merge(
-        playtype_stats,
-        on=['PLAYER_ID', 'SEASON_ID'],
-        how='left'
-    )
-    print(f"✓ Merged play type stats")
+    if playtype_stats is not None:
+        playtype_stats['PLAYER_ID'] = playtype_stats['PLAYER_ID'].astype(int)
+        playtype_stats['SEASON_ID'] = playtype_stats['SEASON_ID'].astype(int)
+        enhanced_data = enhanced_data.merge(
+            playtype_stats, on=['PLAYER_ID', 'SEASON_ID'], how='left'
+        )
+        print(f"✓ Merged play type stats")
 
     print(f"\n✓ Final enhanced dataset: {len(enhanced_data)} records with {len(enhanced_data.columns)} features")
 
@@ -1009,62 +1036,48 @@ def enhance_player_data(player_averages, min_games=10):
 
 def cluster_players_off(data, n_clusters):
     """Perform k-means clustering on players based on their stats and shooting profiles."""
-    # Select features for clustering
     data = data[data['MIN'] > 10].copy()
 
-    # ============ UPDATED: EXPANDED FEATURE SET ============
-    features = [
-        # Traditional stats (existing)
+    required_features = [
         'PTS_per36', 'AST_per36', 'OREB_per36', 'DREB_per36', 'TOV_per36',
         'FG%', 'FG3%', 'FT%',
-
-        # Shot location (existing)
+        'WEIGHT', 'Height_IN',
+    ]
+    optional_features = [
         'paint_shots_per_game_per36', 'paint_fg_pct',
         'corner_3_per_game_per36', 'corner_3_pct',
         'midrange_per_game_per36', 'midrange_pct',
         'above_break_3_per_game_per36', 'above_break_3_pct',
         'avg_shot_distance',
-
-        # Physical attributes (existing)
-        'WEIGHT', 'Height_IN',
-
-        # ============ NEW: TRACKING STATS ============
-        'AVG_SPEED_OFF',  # Offensive speed
-        'CATCHANDSHOOTPER36',  # Catch & shoot attempts
-        'CATCHANDSHOOT3PAPER36',  # Catch & shoot 3PA
-        'PASSESMADEPER36',  # Passing volume
-        'PASSESRECEIVEDPER36',  # Off-ball movement
-        'DRIVESPER36',  # Driving frequency
-        'DRIVE_PTS_PCT',  # % of points from drives
-        'DRIVE_AST_PCT',
-        'AVG_OREB_DIST',# % of assists from drives
-        'OFF_PRBALLHANDLER_FREQ',
-        'OFF_PRROLLMAN_FREQ',
-        'OFF_POSTUP_FREQ',
-        'OFF_SPOTUP_FREQ',
-        'OFF_OFFSCREEN_FREQ',
-        'OFF_CUT_FREQ',
+        'AVG_SPEED_OFF',
+        'CATCHANDSHOOTPER36', 'CATCHANDSHOOT3PAPER36',
+        'PASSESMADEPER36', 'PASSESRECEIVEDPER36',
+        'DRIVESPER36', 'DRIVE_PTS_PCT', 'DRIVE_AST_PCT',
+        'AVG_OREB_DIST',
+        'OFF_PRBALLHANDLER_FREQ', 'OFF_PRROLLMAN_FREQ', 'OFF_POSTUP_FREQ',
+        'OFF_SPOTUP_FREQ', 'OFF_OFFSCREEN_FREQ', 'OFF_CUT_FREQ',
     ]
 
     data['Height_IN'] = data['HEIGHT'].str.split('-').apply(lambda x: int(x[0]) * 12 + int(x[1]))
 
-    minutes_factor = 36 / data['MIN'].clip(lower=1)  # Avoid division by zero
+    minutes_factor = 36 / data['MIN'].clip(lower=1)
     per36_cols = ['PTS', 'AST', 'OREB', 'DREB', 'STL', 'BLK', 'TOV', 'paint_shots_per_game', 'corner_3_per_game',
                   'midrange_per_game', 'above_break_3_per_game']
     for col in per36_cols:
         if col in data.columns:
             data[f'{col}_per36'] = data[col] * minutes_factor
 
-    # Remove rows with missing values
+    # Use only optional features that are actually present in the data
+    available_optional = [f for f in optional_features if f in data.columns]
+    features = required_features + available_optional
+
     clean_data = data.dropna(subset=features)
 
     print(f"\n{'=' * 60}")
     print(f"OFFENSIVE CLUSTERING FEATURES ({len(features)} total)")
     print(f"{'=' * 60}")
-    print("Traditional Stats: PTS, AST, OREB, DREB, TOV, FG%, FG3%, FT%")
-    print("Shot Location: Paint, Corner 3, Midrange, Above Break 3")
-    print("Physical: Height, Weight")
-    print("NEW - Tracking: Speed, Catch&Shoot, Passing, Drives")
+    print("Required: PTS, AST, OREB, DREB, TOV, FG%, FG3%, FT%, Height, Weight")
+    print(f"Optional present: {available_optional}")
     print(f"{'=' * 60}\n")
 
     # Scale the features
@@ -1075,7 +1088,7 @@ def cluster_players_off(data, n_clusters):
 
         # Initialize plots for both methods
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-        min_clusters = 10
+        min_clusters = 4
         max_clusters = 50
         # Lists to store results
         inertia_values = []
@@ -1163,7 +1176,8 @@ def cluster_players_off(data, n_clusters):
     # Add cluster labels to the dataset
     result_data = clean_data.copy()
     result_data['Cluster'] = clusters
-    result_data = result_data[result_data['SEASON_ID'] == 22025]
+    latest_season = result_data['SEASON_ID'].max()
+    result_data = result_data[result_data['SEASON_ID'] == latest_season]
     # Create cluster visualization
     plt.figure(figsize=(12, 8))
 
@@ -1228,31 +1242,24 @@ def cluster_players_off(data, n_clusters):
 
 def cluster_players_def(data, n_clusters):
     """Perform k-means clustering on players based on their defensive stats."""
-    # Select features for clustering
     data = data[data['MIN'] > 10].copy()
 
-    # ============ UPDATED: EXPANDED FEATURE SET ============
-    features = [
-        # Traditional defensive stats (existing)
+    required_features = [
         'DREB_per36',
         'STL_per36',
         'BLK_per36',
-
-        # Physical attributes (existing)
         'WEIGHT',
         'Height_IN',
-
-        # ============ NEW: HUSTLE STATS ============
-        'CONTESTED_SHOTS_2PT_PER36',  # Interior defense
-        'CONTESTED_SHOTS_3PT_PER36',  # Perimeter defense
-        'DEFLECTIONS_PER36',  # Active hands/disruption
-
-        # ============ NEW: TRACKING STATS ============
-        'AVG_SPEED_DEF',  # Defensive speed/mobility
+    ]
+    optional_features = [
+        'CONTESTED_SHOTS_2PT_PER36',
+        'CONTESTED_SHOTS_3PT_PER36',
+        'DEFLECTIONS_PER36',
+        'AVG_SPEED_DEF',
         'AVG_DREB_DIST',
         'DEF_PRBALLHANDLER_FREQ',
         'DEF_PRROLLMAN_FREQ',
-        'DEF_POSTUP_FREQ'
+        'DEF_POSTUP_FREQ',
     ]
 
     data['Height_IN'] = data['HEIGHT'].str.split('-').apply(lambda x: int(x[0]) * 12 + int(x[1]))
@@ -1264,16 +1271,16 @@ def cluster_players_def(data, n_clusters):
         if col in data.columns:
             data[f'{col}_per36'] = data[col] * minutes_factor
 
-    # Remove rows with missing values
+    available_optional = [f for f in optional_features if f in data.columns]
+    features = required_features + available_optional
+
     clean_data = data.dropna(subset=features)
 
     print(f"\n{'=' * 60}")
     print(f"DEFENSIVE CLUSTERING FEATURES ({len(features)} total)")
     print(f"{'=' * 60}")
-    print("Traditional Stats: DREB, STL, BLK")
-    print("Physical: Height, Weight")
-    print("NEW - Hustle: Contested Shots (2PT/3PT), Deflections")
-    print("NEW - Tracking: Defensive Speed")
+    print("Required: DREB, STL, BLK, Height, Weight")
+    print(f"Optional present: {available_optional}")
     print(f"{'=' * 60}\n")
 
     # Scale the features
@@ -1361,7 +1368,8 @@ def cluster_players_def(data, n_clusters):
     # Add cluster labels to the dataset
     result_data = clean_data.copy()
     result_data['Cluster'] = clusters
-    result_data = result_data[result_data['SEASON_ID'] == 22025]
+    latest_season = result_data['SEASON_ID'].max()
+    result_data = result_data[result_data['SEASON_ID'] == latest_season]
     # Create cluster visualization
     plt.figure(figsize=(12, 8))
 
@@ -1425,17 +1433,17 @@ def cluster_players_def(data, n_clusters):
 
 
 def get_player_box():
-    seasons = ['2023-24', '2024-25', '2025-26']
     season_types = ['Regular Season', 'Playoffs']
     frames = []
-    for season in seasons:
+    for season in WNBA_SEASONS:
         for stype in season_types:
             time.sleep(1)
             try:
                 df = LeagueGameLog(
                     player_or_team_abbreviation='P',
                     season_type_all_star=stype,
-                    season=season
+                    season=season,
+                    league_id=WNBA_LEAGUE_ID
                 ).get_data_frames()[0]
                 if not df.empty:
                     frames.append(df)
@@ -1443,7 +1451,6 @@ def get_player_box():
                 print(f"Failed to fetch {stype} {season}: {e}")
     playerbox = pandas.concat(frames, ignore_index=True)
     print(playerbox.columns)
-    # 10 wnba 00 nba 20 g league
     return playerbox
 
 
@@ -1459,7 +1466,7 @@ def box_to_avg(data):
 
 
 def add_height_weight_pos(data):
-    index = nba_api.stats.endpoints.playerindex.PlayerIndex().get_data_frames()[0]
+    index = nba_api.stats.endpoints.playerindex.PlayerIndex(league_id=WNBA_LEAGUE_ID).get_data_frames()[0]
     index = index[['PERSON_ID', 'POSITION', 'HEIGHT', 'WEIGHT']]
     data = index.merge(data, left_on='PERSON_ID', right_on='PLAYER_ID', how='left')
     return data
@@ -1468,7 +1475,7 @@ def add_height_weight_pos(data):
 def add_shot_loc_eff(data):
     print(SynergyPlayTypes(
         player_or_team_abbreviation='P',
-        season='2023-24',
+        season=WNBA_CURRENT_SEASON,
         season_type_all_star='Regular Season'
     ).get_data_frames()[0])
     return
@@ -1531,7 +1538,7 @@ def create_clusters():
     # # Save the enhanced data with ALL features
     # enhanced_data.to_csv('player_data.csv', index=False)
     # print("\n✓ Saved enhanced player data to 'player_data.csv'")
-
+    #
     # Read it back
     enhanced_data = pd.read_csv("player_data.csv").fillna(0)
     # Perform clustering with new features
@@ -1559,65 +1566,49 @@ def create_clusters():
     return
 
 
-st.set_page_config(page_title="NBA Player Archetype Dashboard", layout="wide")
+st.set_page_config(page_title="WNBA Archetype Scout", layout="wide")
 
 
 @st.cache_data
 def load_data():
+    # Populate after running WNBA clustering — add misclassified WNBA players here:
     DEF_CLUSTER_OVERRIDES = {
-        'Scottie Barnes': 8, 'Anthony Davis': 1, 'Rudy Gobert': 1, 'Jaren Jackson Jr.': 8,
-        'Myles Turner': 1, "Kel'el Ware": 1, 'Bam Adebayo': 8, 'Wendell Carter Jr.': 7,
-        'Zach Edey': 7, 'Joel Embiid': 7, 'Nikola Jokić': 7, 'Jalen Smith': 7,
-        'Karl-Anthony Towns': 7, 'Jaden McDaniels': 11, 'Anfernee Simons': 0,
-        'Amen Thompson': 11, 'Jaylon Tyson': 11, 'Shaedon Sharpe': 6, 'Marcus Smart': 11,
-        'Trae Young': 0, 'Kyle Anderson': 12, 'Donte DiVincenzo': 4, 'Jrue Holiday': 4,
-        'Derrick Jones Jr.': 11, 'Larry Nance Jr.': 7, 'Jarred Vanderbilt': 6,
-        'Kenrich Williams': 7, 'GG Jackson': 5, 'Jonathan Kuminga': 5, 'Dalen Terry': 6,
-        'Sharife Cooper': 4, 'Saddiq Bey': 5, 'Dillon Brooks': 11, 'Max Christie': 6,
-        'Walter Clayton Jr.': 4, 'Luguentz Dort': 11, 'Anthony Edwards': 6, 'AJ Green': 0,
-        'Tim Hardaway Jr.': 0, 'Cameron Johnson': 6, 'Zach LaVine': 0, 'Tre Mann': 0,
-        'CJ McCollum': 0, 'Khris Middleton': 12, 'Jamal Murray': 0, 'Aaron Nesmith': 6,
-        'Jalen Pickett': 0, 'Will Riley': 12, 'Klay Thompson': 12, 'Coby White': 0,
-        'Karlo Matković': 3, 'Brandon Clarke': 3, 'Ty Jerome': 4, 'Lawson Lovering': 3,
-        'Cody Martin': 6, 'Jahmai Mashack': 4, 'Mac McClung': 0, 'De\'Anthony Melton': 11,
-        'Drew Peterson': 12, 'Scotty Pippen Jr.': 4, 'Isaiah Stevens': 4,
-        'Matisse Thybulle': 11, 'Tolu Smith': 3, 'Jaylen Wells': 4,
+        # 'Player Name': cluster_id,
     }
     OFF_CLUSTER_NAMES = {
-        0: 'Catch & Shoot Wing',
-        1: 'Athletic Roll Man',
-        2: 'Primary Ball Handler',
-        3: 'Uncategorized',
-        4: 'Spot-Up Role Player',
-        5: 'High Usage Wing',
-        6: 'Secondary Playmaker',
-        7: 'Dominant Big',
-        8: 'Traditional Center',
-        9: 'Stretch Big',
+        0: 'Paint-First Big',
+        1: 'Stretch Big',
+        2: 'Scoring Wing',
+        3: 'Stretch Forward',
+        4: 'Drive-First Guard',
+        5: 'Star Forward',
+        6: 'Playmaking Guard',
     }
     DEF_CLUSTER_NAMES = {
-        8: 'High Stock + D',
-        7: 'Turtles',
-        6: 'Long Wing/Secondary POA',
-        4: 'Pesky Guard',
-        11: 'POA Defender',
-        5: 'Big Wing Defender',
-        0: 'Non POA Guard',
-        3: 'Bad/Slow Big Defender',
-        12: 'Non-POA Wing',
-        1: 'Rim Protector',
+        0: 'Two-Way Wing',
+        1: 'Perimeter Disruptor',
+        2: 'Rim Protector',
+        3: 'Post Anchor',
+        4: 'Dominant Big',
+        5: 'Role Defender',
+        6: 'Guard Scorer',
+        7: 'Elite Playmaker',
+        8: 'Anchor Big',
+        9: 'Stretch Forward',
     }
     playerbox = LeagueGameLog(
         player_or_team_abbreviation='P',
         season_type_all_star='Regular Season',
-        season='2025-26'
+        season=WNBA_CURRENT_SEASON,
+        league_id=WNBA_LEAGUE_ID
     ).get_data_frames()[0]
     time.sleep(1)
     try:
         playoffs = LeagueGameLog(
             player_or_team_abbreviation='P',
             season_type_all_star='Playoffs',
-            season='2025-26'
+            season=WNBA_CURRENT_SEASON,
+            league_id=WNBA_LEAGUE_ID
         ).get_data_frames()[0]
         if not playoffs.empty:
             playerbox = pd.concat([playerbox, playoffs], ignore_index=True)
@@ -1651,7 +1642,7 @@ def load_data():
 
 def main():
     merged = load_data()
-    st.title("🏀 NBA Player Archetype Dashboard (2024–25 Season)")
+    st.title("WNBA Archetype Scout")
 
     # Build cluster name maps from merged data
     off_cluster_name_map = (
@@ -2167,7 +2158,7 @@ def main():
                     selected_minutes = st.slider(
                         "Minutes per game:",
                         min_value=0.0,
-                        max_value=48.0,
+                        max_value=40.0,
                         value=default_min,
                         step=0.5,
                         help=f"Default is median of last 10 games ({default_min:.1f} min)"
@@ -2827,7 +2818,7 @@ def main():
                         selected_minutes = st.slider(
                             "Minutes per game:",
                             min_value=0.0,
-                            max_value=48.0,
+                            max_value=40.0,
                             value=float(median_min),
                             step=0.5,
                             key=f"minutes_{selected_today_player}",
@@ -2902,7 +2893,7 @@ def main():
         except Exception as e:
             st.error(f"Error loading today's games: {str(e)}")
             st.exception(e)
-            st.info("Make sure the NBA API is accessible and there are games scheduled today.")
+            st.info("Make sure the WNBA API is accessible and there are games scheduled today.")
 
     # =====================================================
     # 💰 TAB 5 — FanDuel EV Analysis
