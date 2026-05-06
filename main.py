@@ -1036,7 +1036,7 @@ def enhance_player_data(player_averages, min_games=10):
 
 def cluster_players_off(data, n_clusters):
     """Perform k-means clustering on players based on their stats and shooting profiles."""
-    data = data[data['MIN'] > 10].copy()
+    data = data[(data['MIN'] > 10) & (data['SEASON_ID'].astype(str).str.startswith('2'))].copy()
 
     required_features = [
         'PTS_per36', 'AST_per36', 'OREB_per36', 'DREB_per36', 'TOV_per36',
@@ -1089,7 +1089,7 @@ def cluster_players_off(data, n_clusters):
         # Initialize plots for both methods
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
         min_clusters = 4
-        max_clusters = 50
+        max_clusters = 12
         # Lists to store results
         inertia_values = []
         silhouette_scores = []
@@ -1176,6 +1176,7 @@ def cluster_players_off(data, n_clusters):
     # Add cluster labels to the dataset
     result_data = clean_data.copy()
     result_data['Cluster'] = clusters
+    result_data = result_data[result_data['SEASON_ID'].astype(str).str.startswith('2')]
     latest_season = result_data['SEASON_ID'].max()
     result_data = result_data[result_data['SEASON_ID'] == latest_season]
     # Create cluster visualization
@@ -1242,7 +1243,7 @@ def cluster_players_off(data, n_clusters):
 
 def cluster_players_def(data, n_clusters):
     """Perform k-means clustering on players based on their defensive stats."""
-    data = data[data['MIN'] > 10].copy()
+    data = data[(data['MIN'] > 10) & (data['SEASON_ID'].astype(str).str.startswith('2'))].copy()
 
     required_features = [
         'DREB_per36',
@@ -1368,6 +1369,7 @@ def cluster_players_def(data, n_clusters):
     # Add cluster labels to the dataset
     result_data = clean_data.copy()
     result_data['Cluster'] = clusters
+    result_data = result_data[result_data['SEASON_ID'].astype(str).str.startswith('2')]
     latest_season = result_data['SEASON_ID'].max()
     result_data = result_data[result_data['SEASON_ID'] == latest_season]
     # Create cluster visualization
@@ -3152,5 +3154,5 @@ def clean_existing_csv(filepath='player_data.csv', output_path='player_data.csv'
 
 
 if __name__ == '__main__':
-    #create_clusters()
+    create_clusters()
     main()
