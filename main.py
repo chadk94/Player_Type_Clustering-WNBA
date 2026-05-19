@@ -21,8 +21,8 @@ import pandas as pd
 from FanduelScrape import getnbaprops, reformat_api, get_team_totals
 
 WNBA_LEAGUE_ID = '10'
-WNBA_CURRENT_SEASON = '2025'  # Most recent completed WNBA season
-WNBA_SEASONS = ['2023', '2024', '2025']
+WNBA_CURRENT_SEASON = '2026'  # Most recent completed WNBA season
+WNBA_SEASONS = ['2023', '2024', '2025','2026']
 
 # WNBA teams: id, abbreviation, full name
 WNBA_TEAMS = [
