@@ -485,9 +485,9 @@ def build_player_list():
     for matchup in matchups:
         awayid, awayabb, homeid, homeabb = matchup[0], matchup[1], matchup[2], matchup[3]
         time.sleep(1)
-        awayroster = commonteamroster.CommonTeamRoster(team_id=awayid, season=WNBA_CURRENT_SEASON)
+        awayroster = commonteamroster.CommonTeamRoster(team_id=awayid, season=WNBA_CURRENT_SEASON, league_id_nullable=WNBA_LEAGUE_ID)
         time.sleep(1)
-        homeroster = commonteamroster.CommonTeamRoster(team_id=homeid, season=WNBA_CURRENT_SEASON)
+        homeroster = commonteamroster.CommonTeamRoster(team_id=homeid, season=WNBA_CURRENT_SEASON, league_id_nullable=WNBA_LEAGUE_ID)
         awayroster = pd.DataFrame(awayroster.get_data_frames()[0].PLAYER_ID)
         awayroster['Home'] = False
         awayroster['OPP'] = str([homeabb])
