@@ -1058,7 +1058,7 @@ def cluster_players_off(data, n_clusters):
         'OFF_SPOTUP_FREQ', 'OFF_OFFSCREEN_FREQ', 'OFF_CUT_FREQ',
     ]
 
-    data['Height_IN'] = data['HEIGHT'].str.split('-').apply(lambda x: int(x[0]) * 12 + int(x[1]))
+    data['Height_IN'] = data['HEIGHT'].str.split('-').apply(lambda x: int(x[0]) * 12 + int(x[1]) if isinstance(x, list) and len(x) == 2 else None)
 
     minutes_factor = 36 / data['MIN'].clip(lower=1)
     per36_cols = ['PTS', 'AST', 'OREB', 'DREB', 'STL', 'BLK', 'TOV', 'paint_shots_per_game', 'corner_3_per_game',
@@ -1088,7 +1088,7 @@ def cluster_players_off(data, n_clusters):
 
         # Initialize plots for both methods
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-        min_clusters = 4
+        min_clusters = 6
         max_clusters = 12
         # Lists to store results
         inertia_values = []
@@ -1263,7 +1263,7 @@ def cluster_players_def(data, n_clusters):
         'DEF_POSTUP_FREQ',
     ]
 
-    data['Height_IN'] = data['HEIGHT'].str.split('-').apply(lambda x: int(x[0]) * 12 + int(x[1]))
+    data['Height_IN'] = data['HEIGHT'].str.split('-').apply(lambda x: int(x[0]) * 12 + int(x[1]) if isinstance(x, list) and len(x) == 2 else None)
 
     minutes_factor = 36 / data['MIN'].clip(lower=1)
     per36_cols = ['PTS', 'AST', 'OREB', 'DREB', 'STL', 'BLK', 'TOV', 'paint_shots_per_game', 'corner_3_per_game',
@@ -1292,8 +1292,8 @@ def cluster_players_def(data, n_clusters):
 
         # Initialize plots for both methods
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-        min_clusters = 10
-        max_clusters = 50
+        min_clusters = 6
+        max_clusters = 12
         # Lists to store results
         inertia_values = []
         silhouette_scores = []
@@ -1468,9 +1468,11 @@ def box_to_avg(data):
 
 
 def add_height_weight_pos(data):
-    index = nba_api.stats.endpoints.playerindex.PlayerIndex(league_id=WNBA_LEAGUE_ID).get_data_frames()[0]
-    index = index[['PERSON_ID', 'POSITION', 'HEIGHT', 'WEIGHT']]
-    data = index.merge(data, left_on='PERSON_ID', right_on='PLAYER_ID', how='left')
+    index = nba_api.stats.endpoints.playerindex.PlayerIndex(
+        league_id=WNBA_LEAGUE_ID, historical_nullable=1
+    ).get_data_frames()[0]
+    index = index[['PERSON_ID', 'POSITION', 'HEIGHT', 'WEIGHT']].drop_duplicates('PERSON_ID')
+    data = data.merge(index, left_on='PLAYER_ID', right_on='PERSON_ID', how='left')
     return data
 
 
@@ -1526,20 +1528,20 @@ def basic_clustering(data):
 
 
 def create_clusters():
-    data = get_player_box()
-    print("got data")
-    player_averages = box_to_avg(data)
-    print("converted to avg")
-    print(player_averages)
-    player_averages = add_height_weight_pos(player_averages)
-    print("added height weight")
-
-    # ============ UPDATED: Now includes tracking and hustle stats ============
-    enhanced_data = enhance_player_data(player_averages)
+    # data = get_player_box()
+    # print("got data")
+    # player_averages = box_to_avg(data)
+    # print("converted to avg")
+    # print(player_averages)
+    # player_averages = add_height_weight_pos(player_averages)
+    # print("added height weight")
+    #
+    # # ============ UPDATED: Now includes tracking and hustle stats ============
+    # enhanced_data = enhance_player_data(player_averages)
 
     # Save the enhanced data with ALL features
-    enhanced_data.to_csv('player_data.csv', index=False)
-    print("\n✓ Saved enhanced player data to 'player_data.csv'")
+    # enhanced_data.to_csv('player_data.csv', index=False)
+    # print("\n✓ Saved enhanced player data to 'player_data.csv'")
 
     enhanced_data = pd.read_csv("player_data.csv").fillna(0)
     # Perform clustering with new features
@@ -1577,23 +1579,22 @@ def load_data():
         # 'Player Name': cluster_id,
     }
     OFF_CLUSTER_NAMES = {
-        0: 'Paint-First Big',
-        4: 'Rebounding Wing',
-        5: 'Scoring Guard',
-        6: 'Playmaking Guard',
-        7: 'Interior Scorer',
-        8: 'Stretch Wing',
+        0: 'Scoring Guard',
+        2: 'Paint Big',
+        3: 'Playmaking Guard',
+        4: 'Star Forward',
+        5: 'Fringe Player',
+        6: 'Role Player',
     }
     DEF_CLUSTER_NAMES = {
-        0: 'Post Anchor',
-        1: 'Perimeter Disruptor',
-        2: 'Rim Protector',
-        3: 'Role Defender',
-        4: 'Active Wing',
-        5: 'Versatile Big',
-        6: 'Disruptive Interior',
-        7: 'Guard Defender',
-        9: 'Passive Defender',
+        0: 'Perimeter Disruptor',
+        1: 'Rebounding Big',
+        2: 'Two-Way Rebounder',
+        3: 'Versatile Defender',
+        4: 'Active Guard Defender',
+        5: 'Offensive-First Guard',
+        6: 'Elite Shot Blocker',
+        7: 'Role Defender',
     }
     playerbox = LeagueGameLog(
         player_or_team_abbreviation='P',
@@ -3151,5 +3152,5 @@ def clean_existing_csv(filepath='player_data.csv', output_path='player_data.csv'
 
 
 if __name__ == '__main__':
-    #create_clusters()
+    create_clusters()
     main()
