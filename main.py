@@ -3152,5 +3152,5 @@ def clean_existing_csv(filepath='player_data.csv', output_path='player_data.csv'
 
 
 if __name__ == '__main__':
-    create_clusters()
+    #create_clusters()
     main()
