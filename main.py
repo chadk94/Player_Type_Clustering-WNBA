@@ -1526,22 +1526,21 @@ def basic_clustering(data):
 
 
 def create_clusters():
-    # data = get_player_box()
-    # print("got data")
-    # player_averages = box_to_avg(data)
-    # print("converted to avg")
-    # print(player_averages)
-    # player_averages = add_height_weight_pos(player_averages)
-    # print("added height weight")
-    #
-    # # ============ UPDATED: Now includes tracking and hustle stats ============
-    # enhanced_data = enhance_player_data(player_averages)
-    #
-    # # Save the enhanced data with ALL features
-    # enhanced_data.to_csv('player_data.csv', index=False)
-    # print("\n✓ Saved enhanced player data to 'player_data.csv'")
-    #
-    # Read it back
+    data = get_player_box()
+    print("got data")
+    player_averages = box_to_avg(data)
+    print("converted to avg")
+    print(player_averages)
+    player_averages = add_height_weight_pos(player_averages)
+    print("added height weight")
+
+    # ============ UPDATED: Now includes tracking and hustle stats ============
+    enhanced_data = enhance_player_data(player_averages)
+
+    # Save the enhanced data with ALL features
+    enhanced_data.to_csv('player_data.csv', index=False)
+    print("\n✓ Saved enhanced player data to 'player_data.csv'")
+
     enhanced_data = pd.read_csv("player_data.csv").fillna(0)
     # Perform clustering with new features
     print("\n" + "=" * 60)
@@ -1579,24 +1578,22 @@ def load_data():
     }
     OFF_CLUSTER_NAMES = {
         0: 'Paint-First Big',
-        1: '3-and-D Wing',
-        2: 'Playmaking Guard',
-        3: 'Star Forward',
-        4: 'Role Guard',
+        4: 'Rebounding Wing',
+        5: 'Scoring Guard',
+        6: 'Playmaking Guard',
+        7: 'Interior Scorer',
+        8: 'Stretch Wing',
     }
     DEF_CLUSTER_NAMES = {
-        0: 'Rebounding Wing',
+        0: 'Post Anchor',
         1: 'Perimeter Disruptor',
         2: 'Rim Protector',
-        3: 'Post Anchor',
-        4: 'Role Defender',
-        5: 'Ball-Hawk Guard',
-        6: 'Athletic Wing',
-        7: 'Defensive Anchor',
-        8: 'Outlier',
-        9: 'Two-Way Big',
-        10: 'Anchor Big',
-        11: 'Reserve Guard',
+        3: 'Role Defender',
+        4: 'Active Wing',
+        5: 'Versatile Big',
+        6: 'Disruptive Interior',
+        7: 'Guard Defender',
+        9: 'Passive Defender',
     }
     playerbox = LeagueGameLog(
         player_or_team_abbreviation='P',
