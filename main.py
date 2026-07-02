@@ -1596,31 +1596,19 @@ def load_data():
         6: 'Elite Shot Blocker',
         7: 'Role Defender',
     }
-    playerbox = None
-    max_retries = 2
-    for attempt in range(max_retries):
-        try:
-            playerbox = LeagueGameLog(
-                player_or_team_abbreviation='P',
-                season_type_all_star='Regular Season',
-                season=WNBA_CURRENT_SEASON,
-                league_id=WNBA_LEAGUE_ID,
-                timeout=15
-            ).get_data_frames()[0]
-            break
-        except Exception as e:
-            print(f"Error getting player box scores (attempt {attempt + 1}/{max_retries}): {e}")
-            if attempt == max_retries - 1:
-                raise
-            time.sleep(3)
+    playerbox = LeagueGameLog(
+        player_or_team_abbreviation='P',
+        season_type_all_star='Regular Season',
+        season=WNBA_CURRENT_SEASON,
+        league_id=WNBA_LEAGUE_ID
+    ).get_data_frames()[0]
     time.sleep(1)
     try:
         playoffs = LeagueGameLog(
             player_or_team_abbreviation='P',
             season_type_all_star='Playoffs',
             season=WNBA_CURRENT_SEASON,
-            league_id=WNBA_LEAGUE_ID,
-            timeout=15
+            league_id=WNBA_LEAGUE_ID
         ).get_data_frames()[0]
         if not playoffs.empty:
             playerbox = pd.concat([playerbox, playoffs], ignore_index=True)
