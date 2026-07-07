@@ -1,8 +1,11 @@
 name: Refresh WNBA live data
 
+# NOTE: confirmed 2026-07-07 that GitHub-hosted runners are also blocked by
+# stats.nba.com's cloud-IP block (read timeout on every request). The scheduled
+# refresh instead runs from a local machine via Windows Task Scheduler
+# (refresh_wnba_data.ps1). This workflow is kept manual-only in case that
+# changes or you want to re-test from a different runner.
 on:
-  schedule:
-    - cron: '15 * * * *'
   workflow_dispatch:
 
 jobs:
