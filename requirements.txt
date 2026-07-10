@@ -1,6 +1,7 @@
-matplotlib
+matplotlib==3.10.8
 nba_api==1.11.4
-numpy
-pandas
-scikit_learn
+numpy==2.2.6
+pandas==2.3.0
+scikit_learn==1.8.0
+scipy==1.15.3
 streamlit==1.53.0
