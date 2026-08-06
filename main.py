@@ -1541,62 +1541,73 @@ def load_data():
     # Manual re-labels from the "Archetype" review sheets (2026-08-03). Only players whose
     # hand-assigned cluster differs from the KMeans output are listed here.
     OFF_CLUSTER_OVERRIDES = {
+        # -> 0: Scoring Guard
+        'DiJonai Carrington': 0,
         # -> 1: Sniper
-        'Azzi Fudd': 1, 'Bridget Carleton': 1, 'Cecilia Zandalasini': 1, 'Jewell Loyd': 1,
-        'Jovana Nogic': 1, 'Karlie Samuelson': 1, 'Katie Lou Samuelson': 1, 'Kayla McBride': 1,
-        'Marine Johannes': 1, 'Rachel Banham': 1, 'Sophie Cunningham': 1,
+        'Azzi Fudd': 1, 'Bridget Carleton': 1, 'Cecilia Zandalasini': 1, 'Chloe Bibby': 1,
+        'Jewell Loyd': 1, 'Jovana Nogic': 1, 'Karlie Samuelson': 1, 'Katie Lou Samuelson': 1,
+        'Kayla McBride': 1, 'Kia Nurse': 1, 'Marine Johannes': 1, 'Rachel Banham': 1,
+        'Sami Whitcomb': 1, 'Sophie Cunningham': 1,
         # -> 2: Paint Big
-        'Isabelle Harrison': 2, 'Natasha Mack': 2, 'Nyara Sabally': 2, 'Raegan Beers': 2,
-        'Serah Williams': 2, 'Temi Fagbenle': 2, 'Teonni Key': 2,
+        'Brionna Jones': 2, 'Cheyenne Parker-Tyus': 2, 'Isabelle Harrison': 2, 'Natasha Mack': 2,
+        'Nyara Sabally': 2, 'Raegan Beers': 2, 'Serah Williams': 2, 'Temi Fagbenle': 2,
+        'Teonni Key': 2,
         # -> 3: Playmaking Guard
-        'Kiki Rice': 3, 'Rae Burrell': 3,
+        'Dana Evans': 3, 'Kiki Rice': 3, 'Marine Fauthoux': 3, 'Rae Burrell': 3,
         # -> 4: Star Forward
-        'Alyssa Thomas': 4, 'Janelle Salaun': 4, 'Jessica Shepard': 4,
+        'Alyssa Thomas': 4, 'Janelle Salaun': 4, 'Jessica Shepard': 4, 'Napheesa Collier': 4,
         # -> 5: PnR Handler
-        'Caitlin Clark': 5, 'Carla Leite': 5, 'Chelsea Gray': 5, 'Jackie Young': 5,
-        'Kaitlyn Chen': 5, 'Kelsey Plum': 5, 'Leila Lacan': 5, 'Natasha Cloud': 5,
-        'Natisha Hiedeman': 5, 'Odyssey Sims': 5, 'Olivia Miles': 5, 'Paige Bueckers': 5,
-        'Rickea Jackson': 5, 'Sabrina Ionescu': 5, 'Skylar Diggins': 5, 'Teja Oblak': 5,
-        'Veronica Burton': 5,
+        'Caitlin Clark': 5, 'Carla Leite': 5, 'Chelsea Gray': 5, 'Courtney Vandersloot': 5,
+        'Jackie Young': 5, 'Kaitlyn Chen': 5, 'Kelsey Plum': 5, 'Leila Lacan': 5,
+        'Natasha Cloud': 5, 'Natisha Hiedeman': 5, 'Odyssey Sims': 5, 'Olivia Miles': 5,
+        'Paige Bueckers': 5, 'Rickea Jackson': 5, 'Sabrina Ionescu': 5, 'Skylar Diggins': 5,
+        'Teja Oblak': 5, 'Veronica Burton': 5,
         # -> 6: Role Player
-        'Emily Engstler': 6, 'Liatu King': 6, 'Michaela Onyenwere': 6, 'Nell Angloma': 6,
-        'Rebekah Gardner': 6, 'Sarah Ashlee Barker': 6,
+        'Emily Engstler': 6, 'Isobel Borlase': 6, 'Liatu King': 6, 'Michaela Onyenwere': 6,
+        'Nell Angloma': 6, 'Rebekah Gardner': 6, 'Sarah Ashlee Barker': 6,
+        'Valeriane Ayayi': 6,
         # -> 7: Stretch Big
-        'Alanna Smith': 7, 'Awa Fam': 7, 'Azura Stevens': 7, 'Frieda Buhner': 7, 'Kiah Stokes': 7,
-        'Luisa Geiselsoder': 7, 'Mackenzie Holmes': 7, 'Stefanie Dolson': 7,
+        'Alanna Smith': 7, 'Awa Fam': 7, 'Azura Stevens': 7, 'Dorka Juhasz': 7,
+        'Ezi Magbegor': 7, 'Frieda Buhner': 7, 'Kiah Stokes': 7, 'Luisa Geiselsoder': 7,
+        'Mackenzie Holmes': 7, 'Stefanie Dolson': 7,
     }
     DEF_CLUSTER_OVERRIDES = {
         # -> 0: POA Defender
         'Aziaha James': 0, 'Azzi Fudd': 0, 'Betnijah Laney-Hamilton': 0, 'Brittney Sykes': 0,
-        'Courtney Williams': 0, 'Jacy Sheldon': 0, 'Jordin Canada': 0, 'Kahleah Copper': 0,
-        'Kiki Rice': 0, 'Leila Lacan': 0, 'Leonie Fiebich': 0, 'Lexie Hull': 0,
+        'Courtney Williams': 0, 'DiJonai Carrington': 0, 'Jacy Sheldon': 0, 'Jordin Canada': 0,
+        'Kahleah Copper': 0, 'Kiki Rice': 0, 'Leila Lacan': 0, 'Leonie Fiebich': 0, 'Lexie Hull': 0,
         'Monique Akoa Makani': 0, 'Natasha Cloud': 0, 'Nyadiew Puoch': 0, 'Raven Johnson': 0,
         'Rebekah Gardner': 0, 'Sarah Ashlee Barker': 0, 'Sonia Citron': 0, 'Sophie Cunningham': 0,
         'Veronica Burton': 0,
         # -> 1: Drop Big
-        'Joyner Holmes': 1, 'Kyara Linskens': 1, 'Mackenzie Holmes': 1, 'Raegan Beers': 1,
+        'Brionna Jones': 1, 'Joyner Holmes': 1, 'Kyara Linskens': 1, 'Mackenzie Holmes': 1,
+        'Raegan Beers': 1,
         # -> 2: Rebounding Big
-        'Frieda Buhner': 2, 'Isabelle Harrison': 2, 'Luisa Geiselsoder': 2, 'NaLyssa Smith': 2,
-        'Natasha Howard': 2,
+        'Dorka Juhasz': 2, 'Frieda Buhner': 2, 'Isabelle Harrison': 2, 'Luisa Geiselsoder': 2,
+        'NaLyssa Smith': 2, 'Natasha Howard': 2,
         # -> 3: Versatile Defender
         'Aaliyah Edwards': 3, 'Alyssa Thomas': 3, 'Anastasiia Olairi Kosu': 3, 'Ashlon Jackson': 3,
-        'Bridget Carleton': 3, 'Cecilia Zandalasini': 3, 'Cotie McMahon': 3, 'DeWanna Bonner': 3,
-        'Diamond Miller': 3, 'Haley Jones': 3, 'Katie Lou Samuelson': 3, 'Kayla Thornton': 3,
-        'Kennedy Burke': 3, 'Laura Juskaite': 3, 'Naz Hillmon': 3, 'Nia Coffey': 3,
-        'Rebecca Allen': 3, 'Rickea Jackson': 3, 'Satou Sabally': 3, 'Stephanie Talbot': 3,
+        'Bridget Carleton': 3, 'Cecilia Zandalasini': 3, 'Chloe Bibby': 3, 'Cotie McMahon': 3,
+        'DeWanna Bonner': 3, 'Diamond Miller': 3, 'Haley Jones': 3, 'Isobel Borlase': 3,
+        'Katie Lou Samuelson': 3, 'Kayla Thornton': 3, 'Kennedy Burke': 3, 'Laura Juskaite': 3,
+        'Naz Hillmon': 3, 'Nia Coffey': 3, 'Rebecca Allen': 3, 'Rickea Jackson': 3,
+        'Satou Sabally': 3, 'Stephanie Talbot': 3, 'Valeriane Ayayi': 3,
         # -> 4: Non-POA Guard
         'Allisha Gray': 4, 'Antonia Delaere': 4, 'Caitlin Clark': 4, 'Cassandre Prosper': 4,
         'Chelsea Gray': 4, 'Jackie Young': 4, 'Jovana Nogic': 4, 'Kaila Charles': 4,
-        'Kierstan Bell': 4, 'Lexi Held': 4, 'Lexie Brown': 4, 'Marina Mabrey': 4,
-        'Paige Bueckers': 4, 'Rachel Banham': 4, 'Sabrina Ionescu': 4,
+        'Kia Nurse': 4, 'Kierstan Bell': 4, 'Lexi Held': 4, 'Lexie Brown': 4,
+        'Marina Mabrey': 4, 'Marine Fauthoux': 4, 'Paige Bueckers': 4, 'Rachel Banham': 4,
+        'Sabrina Ionescu': 4, 'Sami Whitcomb': 4,
         # -> 5: Small, Pesky Guards
-        'Alicia Florez': 5, 'Charlisse Leger-Walker': 5, 'Chennedy Carter': 5, 'Jewell Loyd': 5,
-        'Julie Vanloo': 5, 'Kaitlyn Chen': 5, 'Kamiah Smalls': 5, 'Kelsey Plum': 5,
-        'Maria Conde': 5, 'Maya Caldwell': 5, 'Michaela Onyenwere': 5, 'Natisha Hiedeman': 5,
-        'Odyssey Sims': 5, 'Olivia Miles': 5, 'Pauline Astier': 5, 'Rae Burrell': 5,
-        'Saniya Rivers': 5, 'Sydney Taylor': 5, 'Te-Hina Paopao': 5,
+        'Alicia Florez': 5, 'Charlisse Leger-Walker': 5, 'Chennedy Carter': 5,
+        'Courtney Vandersloot': 5, 'Dana Evans': 5, 'Jewell Loyd': 5, 'Julie Vanloo': 5,
+        'Kaitlyn Chen': 5, 'Kamiah Smalls': 5, 'Kelsey Plum': 5, 'Maria Conde': 5,
+        'Maya Caldwell': 5, 'Michaela Onyenwere': 5, 'Natisha Hiedeman': 5, 'Odyssey Sims': 5,
+        'Olivia Miles': 5, 'Pauline Astier': 5, 'Rae Burrell': 5, 'Saniya Rivers': 5,
+        'Sydney Taylor': 5, 'Te-Hina Paopao': 5,
         # -> 6: Elite Shot Blocker
-        'Alanna Smith': 6, 'Breanna Stewart': 6, 'Dominique Malonga': 6, 'Makayla Timpson': 6,
+        'Alanna Smith': 6, 'Breanna Stewart': 6, 'Cheyenne Parker-Tyus': 6,
+        'Dominique Malonga': 6, 'Ezi Magbegor': 6, 'Makayla Timpson': 6, 'Napheesa Collier': 6,
         'Temi Fagbenle': 6,
     }
     OFF_CLUSTER_NAMES = {
