@@ -104,8 +104,15 @@ def main() -> int:
 
     try:
         matchups = fetch_todays_matchups(game_date)
+        label = game_date or 'today'
+        if matchups.empty and game_date is None:
+            # No games today - fall back to tomorrow's slate so the app isn't empty overnight
+            tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+            time.sleep(1)
+            matchups = fetch_todays_matchups(tomorrow)
+            label = f"{tomorrow} (no games today)"
         matchups.to_csv(MATCHUPS_CSV, index=False)
-        print(f"Wrote {len(matchups)} rows to {MATCHUPS_CSV} for {game_date or 'today'}")
+        print(f"Wrote {len(matchups)} rows to {MATCHUPS_CSV} for {label}")
     except Exception as e:
         print(f"FAILED to fetch today's matchups, leaving {MATCHUPS_CSV} untouched: {e}", file=sys.stderr)
         exit_code = 1
