@@ -42,9 +42,10 @@ def fetch_current_season_box() -> pd.DataFrame:
     return playerbox
 
 
-def fetch_scoreboard() -> list:
-    today = datetime.date.today().strftime('%Y-%m-%d')
-    board = ScoreboardV3(game_date=today, league_id=WNBA_LEAGUE_ID)
+def fetch_scoreboard(game_date: str = None) -> list:
+    if game_date is None:
+        game_date = datetime.date.today().strftime('%Y-%m-%d')
+    board = ScoreboardV3(game_date=game_date, league_id=WNBA_LEAGUE_ID)
     game_header = board.game_header.get_data_frame()
     line_scores = board.line_score.get_data_frame()
     matchups = []
@@ -61,8 +62,8 @@ def fetch_scoreboard() -> list:
     return matchups
 
 
-def fetch_todays_matchups() -> pd.DataFrame:
-    matchups = fetch_scoreboard()
+def fetch_todays_matchups(game_date: str = None) -> pd.DataFrame:
+    matchups = fetch_scoreboard(game_date)
     playeroutput = pd.DataFrame()
     for awayid, awayabb, homeid, homeabb in matchups:
         time.sleep(1)
@@ -86,6 +87,11 @@ def fetch_todays_matchups() -> pd.DataFrame:
 
 
 def main() -> int:
+    # Optional: python fetch_live_data.py --date YYYY-MM-DD  (defaults to today)
+    game_date = None
+    if '--date' in sys.argv:
+        game_date = sys.argv[sys.argv.index('--date') + 1]
+
     exit_code = 0
 
     try:
@@ -97,9 +103,9 @@ def main() -> int:
         exit_code = 1
 
     try:
-        matchups = fetch_todays_matchups()
+        matchups = fetch_todays_matchups(game_date)
         matchups.to_csv(MATCHUPS_CSV, index=False)
-        print(f"Wrote {len(matchups)} rows to {MATCHUPS_CSV}")
+        print(f"Wrote {len(matchups)} rows to {MATCHUPS_CSV} for {game_date or 'today'}")
     except Exception as e:
         print(f"FAILED to fetch today's matchups, leaving {MATCHUPS_CSV} untouched: {e}", file=sys.stderr)
         exit_code = 1
